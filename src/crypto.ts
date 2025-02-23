@@ -113,7 +113,7 @@ export async function rsaDecrypt(data: string,privateKey: webcrypto.CryptoKey): 
     privateKey,
     base64ToArrayBuffer(data)
   );
-  const decryptedAsString = new TextDecoder().decode(decrypted);
+  const decryptedAsString = Buffer.from(decrypted).toString("utf-8");
   return decryptedAsString;
 }
 
@@ -169,19 +169,27 @@ export async function symEncrypt(key: webcrypto.CryptoKey,data: string): Promise
     key,
     new TextEncoder().encode(data)
   );
-  const encryptedAsBase64 = arrayBufferToBase64(encrypted);
+  
+  const combined = new Uint8Array(iv.length + encrypted.byteLength);
+  combined.set(iv);
+  combined.set(new Uint8Array(encrypted), iv.length);
+  const encryptedAsBase64 = arrayBufferToBase64(combined);
   return encryptedAsBase64;
 }
 
 // Decrypt a message using a symmetric key
-export async function symDecrypt(strKey: string,encryptedData: string): Promise<string> {
+export async function symDecrypt(strKey: string, encryptedData: string): Promise<string> {
   // TODO implement this function to decrypt a base64 encoded message with a private key
   // tip: use the provided base64ToArrayBuffer function and use TextDecode to go back to a string format
   const key = await importSymKey(strKey);
+  const dataBuffer = base64ToArrayBuffer(encryptedData);
+  const iv = dataBuffer.slice(0, 12);
+  const encrypted = dataBuffer.slice(12);
+
   const decrypted = await webcrypto.subtle.decrypt(
-    { name: "AES-GCM", iv: new Uint8Array(12) },
+    { name: "AES-GCM", iv:iv},
     key,
-    base64ToArrayBuffer(encryptedData)
+    encrypted
   );
   const decryptedAsString = new TextDecoder().decode(decrypted);
   return decryptedAsString;
