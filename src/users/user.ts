@@ -56,11 +56,11 @@ export async function user(userId: number) {
   // 6.1 
   _user.post("/sendMessage", async (req, res) => {
     const { message, destinationUserId } = req.body as SendMessageBody;
-
+  
     // Fetch the node registry
     const response = await fetch(`http://localhost:${REGISTRY_PORT}/getNodeRegistry`);
-    const {nodes} = await response.json() as GetNodeRegistryBody;
-
+    const { nodes } = await response.json() as GetNodeRegistryBody;
+  
     // Create a random circuit of 3 distinct nodes
     const circuit: any[] = [];
     while (circuit.length < 3) {
@@ -70,27 +70,28 @@ export async function user(userId: number) {
       }
     }
     lastCircuit = circuit.map((n) => n.nodeId);
-
+  
     // Create each layer of encryption
     let encryptedMessage = message;
     let destination = String(BASE_USER_PORT + destinationUserId).padStart(10, '0');
-
+  
     for (const node of circuit) {
-
       const symKeyCrypto = await createRandomSymmetricKey();
       const symKeyString = await exportSymKey(symKeyCrypto);
       const symKey = await importSymKey(symKeyString);
-
-      const tempMessage = await symEncrypt(symKey, destination + encryptedMessage); 
-
+  
+      const tempMessage = await symEncrypt(symKey, destination + encryptedMessage);
+  
       destination = String(BASE_ONION_ROUTER_PORT + node.nodeId).padStart(10, '0');
-
+  
       const encryptedSymKey = await rsaEncrypt(symKeyString, node.pubKey);
-
+  
       encryptedMessage = encryptedSymKey + tempMessage;
     }
-    circuit.reverse()
+    circuit.reverse();
     lastCircuit = circuit;
+    lastSentMessage = message; // Set the last sent message
+  
     // Forward the encrypted message to the entry node
     const entryNode = circuit[0];
     await fetch(`http://localhost:${BASE_ONION_ROUTER_PORT + entryNode.nodeId}/message`, {
@@ -99,7 +100,6 @@ export async function user(userId: number) {
       body: JSON.stringify({ message: encryptedMessage }),
     });
     res.sendStatus(200);
-    
   });
 
   const server = _user.listen(BASE_USER_PORT + userId, () => {

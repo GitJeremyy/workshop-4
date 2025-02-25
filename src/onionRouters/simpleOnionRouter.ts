@@ -1,6 +1,5 @@
 import bodyParser from "body-parser";
 import express from "express";
-import fetch from "node-fetch";
 import { BASE_ONION_ROUTER_PORT, REGISTRY_PORT } from "../config";
 import { generateRsaKeyPair, exportPubKey, exportPrvKey, rsaDecrypt, symDecrypt } from "../crypto";
 
@@ -61,6 +60,7 @@ export async function simpleOnionRouter(nodeId: number) {
 
     lastMessageDestination = parseInt(destination, 10);
     lastReceivedDecryptedMessage = innerMessage;
+    lastReceivedEncryptedMessage = message; 
 
     // Forward the message
     if (lastMessageDestination) {

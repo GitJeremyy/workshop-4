@@ -113,7 +113,7 @@ export async function rsaDecrypt(data: string,privateKey: webcrypto.CryptoKey): 
     privateKey,
     base64ToArrayBuffer(data)
   );
-  const decryptedAsString = Buffer.from(decrypted).toString("utf-8");
+  const decryptedAsString = Buffer.from(decrypted).toString("base64");
   return decryptedAsString;
 }
 
