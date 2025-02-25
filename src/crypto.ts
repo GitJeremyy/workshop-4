@@ -98,7 +98,7 @@ export async function rsaEncrypt(b64Data: string,strPublicKey: string): Promise<
   const encrypted = await webcrypto.subtle.encrypt(
     { name: "RSA-OAEP" },
     publicKey,
-    base64ToArrayBuffer(b64Data)
+    Buffer.from(b64Data, "base64")
   );
   const encryptedAsBase64 = arrayBufferToBase64(encrypted);
   return encryptedAsBase64;
@@ -128,7 +128,7 @@ export async function createRandomSymmetricKey(): Promise<webcrypto.CryptoKey> {
   //      keys are extractable.
   const key = await webcrypto.subtle.generateKey(
     {
-      name: "AES-GCM",
+      name: "AES-CBC",
       length: 256,
     },
     true,
@@ -151,7 +151,7 @@ export async function importSymKey(strKey: string): Promise<webcrypto.CryptoKey>
   const imported = await webcrypto.subtle.importKey(
     "raw",
     base64ToArrayBuffer(strKey),
-    { name: "AES-GCM" },
+    { name: "AES-CBC" },
     true,
     ["encrypt", "decrypt"]
   );
@@ -163,15 +163,15 @@ export async function importSymKey(strKey: string): Promise<webcrypto.CryptoKey>
 export async function symEncrypt(key: webcrypto.CryptoKey,data: string): Promise<string> {
   // TODO implement this function to encrypt a base64 encoded message with a public key
   // tip: encode the data to a uin8array with TextEncoder
-  const iv = webcrypto.getRandomValues(new Uint8Array(12));
+  const iv = webcrypto.getRandomValues(new Uint8Array(16));
   const encrypted = await webcrypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-CBC", iv },
     key,
     new TextEncoder().encode(data)
   );
   
   const combined = new Uint8Array(iv.length + encrypted.byteLength);
-  combined.set(iv);
+  combined.set(iv,0);
   combined.set(new Uint8Array(encrypted), iv.length);
   const encryptedAsBase64 = arrayBufferToBase64(combined);
   return encryptedAsBase64;
@@ -183,11 +183,11 @@ export async function symDecrypt(strKey: string, encryptedData: string): Promise
   // tip: use the provided base64ToArrayBuffer function and use TextDecode to go back to a string format
   const key = await importSymKey(strKey);
   const dataBuffer = base64ToArrayBuffer(encryptedData);
-  const iv = dataBuffer.slice(0, 12);
-  const encrypted = dataBuffer.slice(12);
+  const iv = dataBuffer.slice(0, 16);
+  const encrypted = dataBuffer.slice(16);
 
   const decrypted = await webcrypto.subtle.decrypt(
-    { name: "AES-GCM", iv:iv},
+    { name: "AES-CBC", iv:iv},
     key,
     encrypted
   );
